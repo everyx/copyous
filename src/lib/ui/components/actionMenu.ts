@@ -197,9 +197,16 @@ export class ActionPopupMenuSection extends PopupMenu.PopupMenuSection<ActionPop
 		// Timeout after 30 seconds
 		const token = new Gio.Cancellable();
 		this._tokens.push(token);
-		const timeoutId = GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT, 30, () => {
+		let timeoutId = GLib.timeout_add_seconds(GLib.PRIORITY_HIGH, 30, () => {
+			timeoutId = -1;
 			token.cancel();
 			return GLib.SOURCE_REMOVE;
+		});
+
+		token.connect(() => {
+			if (timeoutId >= 0) GLib.source_remove(timeoutId);
+			const i = this._tokens.indexOf(token);
+			if (i >= 0) this._tokens.splice(i, 1);
 		});
 
 		try {
@@ -208,10 +215,8 @@ export class ActionPopupMenuSection extends PopupMenu.PopupMenuSection<ActionPop
 			const process = Gio.Subprocess.new(['sh', '-c', action.command, '_', ...match.slice(1)], flags);
 
 			// Wait for the command to complete and handle the output
-			const [stdout, stderr] = await process.communicate_utf8_async(entry.content, null);
-			GLib.source_remove(timeoutId);
-			const i = this._tokens.indexOf(token);
-			if (i >= 0) this._tokens.splice(i, 1);
+			const [stdout, stderr] = await process.communicate_utf8_async(entry.content, token);
+			token.cancel();
 
 			if (process.get_successful()) {
 				const output = stdout.trim();
