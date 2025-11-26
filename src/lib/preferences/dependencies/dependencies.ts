@@ -18,21 +18,16 @@ import {
 import { registerClass } from '../../common/gjs.js';
 import { Icon } from '../../common/icons.js';
 
-async function checkGda(): Promise<boolean> {
+async function checkGda(prefs: ExtensionPreferences): Promise<boolean> {
 	try {
 		const Gda = (await import('gi://Gda')).default;
 
 		// Check if SQLite provider is installed
-		const iter = Gda.Config.list_providers().create_iter();
-		while (iter.move_next()) {
-			const provider = iter.get_value_for_field('Provider') as unknown as string;
-			if (provider === 'SQLite') {
-				return true;
-			}
-		}
+		Gda.Config.get_provider('SQLite');
 
-		return false;
-	} catch {
+		return true;
+	} catch (err) {
+		prefs.getLogger().error((err as Error).message);
 		return false;
 	}
 }
@@ -439,7 +434,7 @@ export class DependenciesWarningButton extends Gtk.MenuButton {
 		this.menu_model = this._menu;
 
 		// Checks
-		checkGda()
+		checkGda(prefs)
 			.then((libgda) => {
 				this._libgda = libgda;
 				if (libgda) this.deleteItem('libgda');
