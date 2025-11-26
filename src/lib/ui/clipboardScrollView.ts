@@ -54,12 +54,13 @@ export class ClipboardScrollView extends St.ScrollView {
 			'changed::show-scrollbar',
 			this.updateScrollbar.bind(this),
 			'changed::item-width',
-			this.updateScrollbar.bind(this),
+			this.updateSize.bind(this),
 			'changed::item-height',
-			this.updateScrollbar.bind(this),
+			this.updateSize.bind(this),
 			this,
 		);
 
+		this.updateSize();
 		this.updateScrollbar();
 
 		this.bind_property('orientation', this._scrollContainer, 'orientation', GObject.BindingFlags.SYNC_CREATE);
@@ -97,9 +98,12 @@ export class ClipboardScrollView extends St.ScrollView {
 		this._scrollContainer.activateFirst();
 	}
 
-	private updateScrollbar() {
+	private updateSize() {
 		this._itemWidth = this.ext.settings.get_int('item-width');
 		this._itemHeight = this.ext.settings.get_int('item-height');
+	}
+
+	private updateScrollbar() {
 		const show = this.ext.settings.get_boolean('show-scrollbar');
 
 		if (!show) {
@@ -116,7 +120,8 @@ export class ClipboardScrollView extends St.ScrollView {
 
 	private scrollbarWorkaround(): void {
 		// Workaround for horizontal scrollbar not auto hiding
-		if (this.orientation === Clutter.Orientation.HORIZONTAL) {
+		const show = this.ext.settings.get_boolean('show-scrollbar');
+		if (show && this.orientation === Clutter.Orientation.HORIZONTAL) {
 			if (this.allocation.get_width() > this._scrollContainer.allocation.get_width()) {
 				this.hscrollbarPolicy = St.PolicyType.EXTERNAL;
 			} else {
