@@ -80,7 +80,7 @@ POT := resources/po/main.pot
 pot: $(POT)
 
 resources/po/%.po: resources/po/main.pot
-	msgmerge --backup=off -U $@ $<
+	msgmerge --backup=off -N -U $@ $<
 
 PO := $(wildcard resources/po/*.po)
 po: $(PO)
