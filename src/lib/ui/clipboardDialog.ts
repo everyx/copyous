@@ -214,7 +214,7 @@ export class ClipboardDialog extends St.Widget {
 		this._updateCursor = false;
 		this._nextCursor = this._cursor;
 
-		const grab = Main.pushModal(this, { actionMode: Shell.ActionMode.SYSTEM_MODAL }) as Clutter.Grab;
+		const grab = Main.pushModal(this, { actionMode: Shell.ActionMode.NORMAL }) as Clutter.Grab;
 		if (grab.get_seat_state() !== Clutter.GrabState.ALL) {
 			Main.popModal(grab);
 			return;
