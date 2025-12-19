@@ -504,6 +504,10 @@ export class SearchEntry extends St.Entry {
 	}
 
 	private _keyPressEvent(event: Clutter.Event) {
+		if (this.clutter_text.has_preedit()) {
+			return Clutter.EVENT_PROPAGATE;
+		}
+
 		const key = event.get_key_symbol();
 
 		// Navigate focus to type button: left + left & cursor at start
