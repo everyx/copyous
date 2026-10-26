@@ -302,20 +302,16 @@ export async function tryCreateMediaFileInfo(
 
 			await new Promise<void>((resolve) => {
 				let i = 0;
-				const timeoutId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 50, () => {
+				GLib.timeout_add(GLib.PRIORITY_DEFAULT, 50, () => {
 					[success, duration] = pipeline.query_duration(Gst.Format.TIME);
-					if (success || i >= 5) {
+					if (success || i >= 5 || cancellable.is_cancelled()) {
 						resolve();
-						cancellable.disconnect(cancellableId);
 						return GLib.SOURCE_REMOVE;
 					}
 
 					i++;
-					cancellable.disconnect(cancellableId);
 					return GLib.SOURCE_CONTINUE;
 				});
-
-				const cancellableId = cancellable.connect(() => GLib.source_remove(timeoutId));
 			});
 		}
 

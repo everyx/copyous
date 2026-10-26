@@ -112,7 +112,7 @@ function async_statement_execute_select<T>(
 			);
 
 			let i = 0;
-			const timeoutId = GLib.timeout_add(GLib.PRIORITY_HIGH, 100, () => {
+			GLib.timeout_add(GLib.PRIORITY_HIGH, 100, () => {
 				try {
 					const [result] = connection.async_fetch_result(id);
 					if (result) {
@@ -121,27 +121,21 @@ function async_statement_execute_select<T>(
 						} else {
 							reject(new Error('Statement is not a selection statement'));
 						}
-						cancellable.disconnect(cancellableId);
 						return GLib.SOURCE_REMOVE;
 					}
 
-					if (i >= 10) {
+					if (i >= 10 || cancellable.is_cancelled()) {
 						reject(new Error('Timeout'));
-						cancellable.disconnect(cancellableId);
 						return GLib.SOURCE_REMOVE;
 					}
 
 					i++;
-					cancellable.disconnect(cancellableId);
 					return GLib.SOURCE_CONTINUE;
 				} catch (error) {
 					reject(error as Error);
-					cancellable.disconnect(cancellableId);
 					return GLib.SOURCE_REMOVE;
 				}
 			});
-
-			const cancellableId = cancellable.connect(() => GLib.source_remove(timeoutId));
 		} else {
 			// Gda 6
 			GLib.idle_add(GLib.PRIORITY_HIGH, () => {
@@ -176,7 +170,7 @@ function async_statement_execute_non_select(
 			);
 
 			let i = 0;
-			const timeoutId = GLib.timeout_add(GLib.PRIORITY_HIGH, 100, () => {
+			GLib.timeout_add(GLib.PRIORITY_HIGH, 100, () => {
 				try {
 					const [result, lastRow] = connection.async_fetch_result(id);
 					if (result) {
@@ -186,27 +180,21 @@ function async_statement_execute_non_select(
 						} else {
 							reject(new Error('Statement is a selection statement'));
 						}
-						cancellable.disconnect(cancellableId);
 						return GLib.SOURCE_REMOVE;
 					}
 
-					if (i >= 10) {
+					if (i >= 10 || cancellable.is_cancelled()) {
 						reject(new Error('Timeout'));
-						cancellable.disconnect(cancellableId);
 						return GLib.SOURCE_REMOVE;
 					}
 
 					i++;
-					cancellable.disconnect(cancellableId);
 					return GLib.SOURCE_CONTINUE;
 				} catch (error) {
 					reject(error as Error);
-					cancellable.disconnect(cancellableId);
 					return GLib.SOURCE_REMOVE;
 				}
 			});
-
-			const cancellableId = cancellable.connect(() => GLib.source_remove(timeoutId));
 		} else {
 			// Gda 6
 			GLib.idle_add(GLib.PRIORITY_HIGH, () => {
