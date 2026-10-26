@@ -85,6 +85,7 @@ export class ClipboardManager extends GObject.Object {
 	private pasteSignalId: number = -1;
 
 	private prevClipboard: [ContentType, string] | null = null;
+	private _destroyed: boolean = false;
 
 	constructor(
 		private ext: CopyousExtension,
@@ -95,10 +96,19 @@ export class ClipboardManager extends GObject.Object {
 		this.selection = global.display.get_selection();
 		this.clipboard = St.Clipboard.get_default();
 
-		this.signalId = this.selection.connect('owner-changed', this.ownerChanged.bind(this));
+		this.signalId = this.selection.connect('owner-changed', (...args) => {
+			// _emit() ignores the return value, so a rejected promise would surface as an
+			// unhandled rejection. Keep the handler fire-and-forget but always handled.
+			this.ownerChanged(...args).catch((e: unknown) => this.ext.logger?.error(e));
+		});
 	}
 
 	public destroy() {
+		// Disconnect first: owner-changed may still fire while tearing down
+		if (this.signalId >= 0) this.selection.disconnect(this.signalId);
+		this.signalId = -1;
+		this._destroyed = true;
+
 		this.textDecoder = undefined;
 		this.textEncoder = undefined;
 		this.graphemeSegmenter = undefined;
@@ -106,9 +116,7 @@ export class ClipboardManager extends GObject.Object {
 		this.keyboard?.destroy();
 		this.keyboard = undefined;
 
-		if (this.signalId >= 0) this.selection.disconnect(this.signalId);
 		if (this.pasteSignalId >= 0) GLib.source_remove(this.pasteSignalId);
-		this.signalId = -1;
 		this.pasteSignalId = -1;
 	}
 
@@ -251,11 +259,13 @@ export class ClipboardManager extends GObject.Object {
 		selectionSource: Meta.SelectionSource | null,
 	) {
 		try {
+			if (this._destroyed) return;
 			if (selectionSource === null) return;
 			if (selectionType !== Meta.SelectionType.SELECTION_CLIPBOARD) return;
 
 			const mimeTypes = selectionSource.get_mimetypes();
 			const content = await this.getContent(selectionSource, mimeTypes);
+			if (this._destroyed) return;
 			if (!content) return;
 
 			const checksum = contentChecksum(content);
@@ -283,6 +293,7 @@ export class ClipboardManager extends GObject.Object {
 			if (!this.shouldSave(mimeTypes)) return;
 
 			const res = await this.convertContent(content);
+			if (this._destroyed) return;
 			if (!res) return;
 
 			const [type, text, metadata] = res;
@@ -291,7 +302,7 @@ export class ClipboardManager extends GObject.Object {
 				this.emit('clipboard', entry);
 			}
 		} catch (e) {
-			this.ext.logger.error(e);
+			this.ext.logger?.error(e);
 		}
 	}
 

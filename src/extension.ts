@@ -325,6 +325,14 @@ export default class CopyousExtension extends Extension {
 		this.shortcutsManager?.destroy();
 		this.shortcutsManager = undefined;
 
+		// Clipboard Manager
+		// Tear this down before the database: destroying the database re-enters the
+		// main loop (Gda runs its work in a worker thread), and the selection signal
+		// must already be disconnected by then.
+		this.clipboardManager?.disconnectObject(this);
+		this.clipboardManager?.destroy();
+		this.clipboardManager = undefined;
+
 		// Database
 		const error = this.logger.error.bind(this.logger);
 		this.entryTracker?.destroy().catch(error);
@@ -332,11 +340,6 @@ export default class CopyousExtension extends Extension {
 
 		if (this.historyTimeoutId >= 0) GLib.source_remove(this.historyTimeoutId);
 		this.historyTimeoutId = -1;
-
-		// Clipboard Manager
-		this.clipboardManager?.disconnectObject(this);
-		this.clipboardManager?.destroy();
-		this.clipboardManager = undefined;
 
 		// Globals
 		this.settings?.disconnectObject(this);
